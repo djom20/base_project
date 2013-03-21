@@ -1,0 +1,26 @@
+// Initilize GA Tracker
+    $tracker = new GoogleAnalyticsTracker('UA-XXXXXXXX', 'myanalyticsdomain.com');
+    // Assemble Visitor information
+    // (could also get unserialized from database)
+    $visitor = new GoogleAnalyticsVisitor();
+    $visitor->setIpAddress($_SERVER['REMOTE_ADDRESS']);
+    $visitor->setUserAgent($_SERVER['HTTP_USER_AGENT']);
+    $visitor->setScreenResolution('1024x768');
+
+    // Assemble Session information
+    // (could also get unserialized from PHP session)
+    $session = new GoogleAnalyticsSession();
+
+    // Assemble Page information
+    $page = new GoogleAnalyticsPage('/analytics/yourfakepage');
+    $page->setTitle('fake page topic');
+
+    // Track page view
+    $tracker->trackPageview($page, $session, $visitor);
+
+
+
+    /*
+    Lega note: This is NOT developed by alon carmel originally. its developed by http://code.google.com/p/php-ga/ by Thomas Bachem tb@unitedprototype.com. i just modified the code to work without namespaces using php5.x and not 5.3and up. all the rights belong to thomas bachem.
+
+    */

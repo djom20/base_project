@@ -1,0 +1,173 @@
+DESCRIPTION
+
+Adding statistics and graphs to a website / web application is a time consuming and often complicated process - composing the database queries, processing the data and developing an interface to control it are all major time sinks.
+
+This component condenses years of experience implementing such interfaces into an easy to integrate PHP class and styled HTML / JS controls.
+
+
+
+
+
+Features:
+
+Plug-and-play - Just pass the database table name, time column and data column(s) to the PHP class and let it handle querying and processing.
+Data grouping by multiple time periods - by day, by week, by month and by year.
+Time range control for specifying date range dynamically.
+Graphs styles are inspired by Google Analytics.
+Update data asynchronously via AJAX
+Requirements:
+
+PHP 5+
+MySQL database 5+ (can be adjusted to use other SQL databases, see below)
+Tables with time based data (rows are stamped with a date, datetime or timestamp values)
+Included libraries:
+
+jQuery (via CDN)
+flot - Plotting library
+Moment.js - Date framework
+Modified DatePicker plugin - Date range controls
+
+
+
+DOCUMENTATION
+
+PHP library
+
+The PHP part of this component is located in /library/Lionite/Stats.php. Place it with your other library / PHP files, and include it in the page you want to show the graph:
+
+include('path/to/Stats.php');
+Usage
+
+In order to generate graph data using the PHP library, we need to pass it several required parameters:
+
+The name of the table we want to analyze
+The name of the date/time column (a TIMESTAMP, DATE or DATETIME column type)
+The name of the data column(s) we want to use in our graph, along with an aggregation function such as COUNT(), SUM() or AVG().
+We can pass those parameters in the constructor of the class, or via setter methods.
+
+Example using constructor:
+
+$stats = new Lionite_Stats(array(
+    'table' => 'views',
+    'timeCol' => 'date',
+    'dataCols' => array('Views' => 'SUM(views)')
+));
+Example using setter methods (supports chaining):
+
+$stats = new Lionite_Stats();
+$stats -> setTable('views')
+       -> setTimeColumn('date')
+       -> setDataColumns(array('Views' => 'SUM(views)'));
+Once we call the processData() method, the table will be queried and the data will be processed.
+
+$stats -> processData();
+That's basically all we need to generate the data for the graphs, but we can control a few more aspects of the data:
+
+Choose a date period to group the data by. Possible values include 'daily','weekly','monthy','yearly'
+
+$stats -> setPeriod('weekly');
+Set the date range for the data. The class will provide some useful defaults if no date range is given -
+
+1 month ago from today for the 'daily' period
+12 weeks ago from today for the 'weekly' period
+1 year ago from today for the 'monthly' period
+5 years ago from today for the 'yearly' period
+Setting the data range ourselves is done via the setDateRange() method. It accepts a string of two yyyy-mm-dd dates separated with a hyphen:
+
+$stats -> setDateRange('2012-04-10 - 2012-02-10');
+Connecting to MySQL
+
+If a connection to MySQL is already present in your scripts, the class will use that connection to connect to MySQL. If not, you will need to create a connection before calling the processData(). You can create it manually, or use the class connect() method:
+
+$stats -> connect('database_name','username','password');
+You can also pass the hostname as a 4th parameter, it defaults to localhost.
+
+MySQL Aggregate functions
+
+Aggregating data for each period ('daily','weekly', etc) is done using MySQL aggregate functions. If you have no previous experience with those, we'll cover the most commonly used ones briefly here:
+
+COUNT(column) - COUNT() counts the non-null values of a column. It is often used to count the primary key of a table (in which case we are basically counting rows), but can be used on any column.
+SUM(column) - SUM() sums the values of the column it is applied on. You would use SUM() to sum up columns that represent amounts - such as items in inventory or cash balance.
+AVG(column) - AVG() returns the AVG() amount of the column it is applied on. You would use AVG() on columns that you would use SUM() on - but to get the average value instead of the sum of the values.
+For more detailed information and additional aggregate functions, see the MySQL manual page on the subject.
+
+Filter conditions and advanced usage (WHERE and JOIN)
+
+We might need to filter the analyzed data based on some criteria. For example, we want to show each user only his specific data. For that purpose we can add WHERE clauses using the where() method:
+
+$stats -> where('user_id=5');
+You can add multiple WHERE clauses with multiple calls to the where() method.
+
+Note: this class does not make any pretense to escape or filter your data. If you pass user input or from an otherwise untrusted source into it, make sure you escape it properly.
+
+In addition, you can join multiple tables in order to aggregate columns that are not on the main table passed to the class. Joining tables is done by passing the join condition to the join() method:
+
+$stats -> join('INNER JOIN users_balance ON users_balance.user_id=users.id);
+AJAX script
+
+In addition to the setup in our main page, we will need an additional script that will be the source of the AJAX requests from the graph controls when changing the time period and changing the date range. Note: the AJAX script is optional - if you do not wish for the user to be able to change the time period or date range, you can skip this part. Read more about the graph controls on the bottom of the "Showing the graphs" section.
+
+This script should initialize the PHP class the same way we've just covered, and output the generated JSON directly instead of passing it to the Javascript class:
+
+Example:
+
+/** ajax.php example **/
+
+include('path/to/Stats.php');
+$stats = new Lionite_Stats();
+$stats -> setTable('views')
+       -> setTimeColumn('date')
+       -> setDataColumns(array('Views' => 'SUM(views)'))
+       -> processData();
+echo $stats -> getJsonData();
+Using non-MySQL databases
+
+The class can be adapted to non-MySQL databases by modifying a couple of methods -
+
+connect() - uses mysql_connect() and mysql_select_db()
+query() - uses mysql_query() and mysql_fetch_assoc()
+Change those function calls to those relevant your database.
+
+PHP documentation
+
+The class is fully documented with explanations on the various parameters that can be used in each method. In addition, a usage example is included with the component.
+
+Back to top
+SHOWING THE GRAPHS
+
+First we need to include the provided assets - Javascript and CSS scripts that are found in the /assets directory. We recommend that you copy the /assets directory as is for easy update in the future. Place the /assets directory under your document root folder (ie, in a publicly accessible folder), and include the following scripts in the <head> tag of your document:
+
+<script type="text/javascript" src="assets/js/required.js"></script>
+<script type="text/javascript" src="assets/js/stats.js"></script>
+The required.js script includes a minified version of moment.js, datepicker.js and jquery.flot.min.js. All three scripts are included in the package as well, and you can download the originals from their respective websites if needed. stats.js was left separated in case you need to customize it (see below).
+
+In addition, you need to include jQuery if it is not already present. We usually include it via the Google CDN:
+
+<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+In order to initialize the graphs, we call the init() method on the LioniteStats object and pass it the data generated by the PHP class and additional options as needed:
+
+<script type="text/javascript">
+$(document).ready(function(){
+    var options = {ajaxUrl:'ajax.php'}; // Custom options go here
+    LioniteStats.init(<?php echo $stats -> getJsonData(); ?>,options);
+});
+</script>
+Options include:
+
+ajaxUrl - A path to the PHP script that would handle AJAX calls (as explained in the PHP section)
+template - The graph HTML template.
+colors - An array of hex colors to be used by the graph line series.
+Stylesheets
+
+Next we include the provided stylesheets.
+
+<link href="assets/css/reset.css" rel="stylesheet" type="text/css" />
+<link href="assets/css/stats.css" rel="stylesheet" type="text/css" />
+<link href="assets/css/datepicker.css" rel="stylesheet" type="text/css" />
+The package includes a CSS reset script taken from the HTML 5 boilerplate - if you already use your own CSS reset or don't feel the need to use one, you can skip it.
+
+You can customize the appearance of the graph controls and hover bubble in assets/css/stats.css and the appearance of the range datepicker in assets/css/datepicker.css.
+
+Graph controls
+
+The included example includes graph controls for changing the time period and date range. If you wish for graph controls to appear for your graphs, you need copy it as-is from the example (the form with id="stats-controls").
